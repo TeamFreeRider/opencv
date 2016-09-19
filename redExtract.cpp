@@ -34,9 +34,11 @@ int main(int argc, const char * argv[]) {
             }
         }
 
-        red_position_x /= red_count;
-        red_position_y /= red_count;
-
+        if ( redcount != 0 ) {
+            red_position_x /= red_count;
+            red_position_y /= red_count;
+        }
+        
         imshow("frame", frame);
         std::cout << red_position_x << ", " << red_position_y << std::endl;
 
