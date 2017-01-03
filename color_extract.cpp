@@ -60,8 +60,7 @@ start = std::clock();
 
         for(int row = 0; row < frame.rows; row++)
             for(int col = 0; col < frame.cols; col++) {
-                if(!is_red(frame, row, col))
-                    fill_black(frame, row, col);
+      
                 if (is_red(frame, row, col)) {
                     red_position_x += col;
                     red_position_y += row;
@@ -69,7 +68,7 @@ start = std::clock();
                 }
                 else if (is_blue(frame, row, col)) {
 
-                   blue_position_x += col;
+                    blue_position_x += col;
                     blue_position_y += row;
                     blue_count += 1;
                 }
@@ -141,4 +140,4 @@ void create_update(int location_x, int location_y, char color) {
     document << "x" << location_x
              << "y" << location_y;
 
-
+}
