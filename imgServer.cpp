@@ -199,7 +199,18 @@ void fill_black(Mat frame, int row, int col) {
 
 void writeText( int red_x, int red_y, int blue_x, int blue_y ){
     location_file.open(path);
-    location_file << "red : " << red_x << ", " << red_y << " / blue : " << blue_x << ", " << blue_y <<endl;
+//    location_file << "red : " << red_x << ", " << red_y << " / blue : " << blue_x << ", " << blue_y <<endl;
+
+int data[4] = {red_x, red_y, blue_x, blue_y};
+
+
+    for ( int i=0; i<4; i++ ){
+	if (data[i] < 10)
+	    location_file << "0" << data[i];
+	else
+	    location_file << data[i];
+     }
+	
     location_file.close();
 }
 
