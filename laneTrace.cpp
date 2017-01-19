@@ -62,10 +62,6 @@ int main(int, char**)
         Mat view;
         edges.copyTo(view,roi1);
 
-        //ROI_SETTING
-        Rect leftRoi = Rect( 0, 0, width/3, height );
-        Mat tmp = view.clone();
-
        //ROI_SETTING
         Rect leftRoi = Rect( 0, 0, width/3, height );
         Mat tmp = view.clone();

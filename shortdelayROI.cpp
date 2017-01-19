@@ -29,12 +29,11 @@ int main(int, char**) {
         Point L3 = Point(width / 6, height);
         Point L4 = Point(0, height);
         vector <Point> left_P;
-
         left_P.push_back(L1);
         left_P.push_back(L2);
         left_P.push_back(L3);
         left_P.push_back(L4);
-
+        
         //right side
         Point R1 = Point(width / 3 * 2, 0);
         Point R2 = Point(width, 0);
