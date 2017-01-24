@@ -111,6 +111,8 @@ int main(int argc, char * argv[]) {
 std::clock_t    start;
 start = std::clock();
 */
+
+
         for(int row = 0; row < frame.rows; row++) 
             for(int col = 0; col < frame.cols; col++) {
                 if (is_red(frame, row, col)) {
@@ -141,8 +143,14 @@ start = std::clock();
         editPortion(&red_position_x, &red_position_y);
         editPortion(&blue_position_x, &blue_position_y);
 
-std::cout << "red : " << red_position_x << ", " << red_position_y << std::endl;
-std::cout << "blue : " << blue_position_x << ", " << blue_position_y << std::endl;
+        red_position_y = 28 - red_position_y;
+	blue_position_y = 28 - blue_position_y;
+
+	red_position_x += 1;
+	blue_position_x += 1;
+
+
+std::cout << "red : " << red_position_x << ", " << red_position_y << "// blue : " << blue_position_x << ", " << blue_position_y << std::endl;
 
 	writeText(red_position_x, red_position_y, blue_position_x, blue_position_y );
 
@@ -154,16 +162,15 @@ std::cout << "blue : " << blue_position_x << ", " << blue_position_y << std::end
 
 
             imshow("recv", frame);
+
             free(longbuf);
 
-	    cout << " row : " << frame.rows << ", col : " << frame.cols <<endl;
+//	    cout << " row : " << frame.rows << ", col : " << frame.cols <<endl;
 
             waitKey(1);
             clock_t next_cycle = clock();
             double duration = (next_cycle - last_cycle) / (double) CLOCKS_PER_SEC;
-//            cout << "\teffective FPS:" << (1 / duration) << " \tkbps:" << (PACK_SIZE * total_pack / duration / 1024 * 8) << endl;
 
-//            cout << next_cycle - last_cycle;
             last_cycle = next_cycle;
         }
     } catch (SocketException & e) {
@@ -178,16 +185,19 @@ std::cout << "blue : " << blue_position_x << ", " << blue_position_y << std::end
 
 int is_red(Mat frame, int row, int col) {
     return
-            frame.at<Vec3b>(row, col)[0] < other_threshold &&
-            frame.at<Vec3b>(row, col)[1] < other_threshold &&
-            frame.at<Vec3b>(row, col)[2] > focus_threshold;
+            ((frame.at<Vec3b>(row, col)[0] < (frame.at<Vec3b>(row, col)[2] - 70)) &&
+            (frame.at<Vec3b>(row, col)[1] < (frame.at<Vec3b>(row, col)[2] - 100)) &&
+            frame.at<Vec3b>(row, col)[2] > 130) ||
+	    ((frame.at<Vec3b>(row, col)[0] < 100) &&
+            (frame.at<Vec3b>(row, col)[1] < 110) &&
+            frame.at<Vec3b>(row, col)[2] > 150);
 }
 
 int is_blue(Mat frame, int row, int col) {
     return
-            frame.at<Vec3b>(row, col)[0] > focus_threshold &&
-            frame.at<Vec3b>(row, col)[1] < other_threshold &&
-            frame.at<Vec3b>(row, col)[2] < other_threshold;
+            frame.at<Vec3b>(row, col)[0] > 100 &&
+            (frame.at<Vec3b>(row, col)[1] < (frame.at<Vec3b>(row, col)[0] - 30)) &&
+            (frame.at<Vec3b>(row, col)[2] < (frame.at<Vec3b>(row, col)[0] - 60));
 }
 
 void fill_black(Mat frame, int row, int col) {
@@ -199,13 +209,24 @@ void fill_black(Mat frame, int row, int col) {
 
 void writeText( int red_x, int red_y, int blue_x, int blue_y ){
     location_file.open(path);
-    location_file << "red : " << red_x << ", " << red_y << " / blue : " << blue_x << ", " << blue_y <<endl;
+//    location_file << "red : " << red_x << ", " << red_y << " / blue : " << blue_x << ", " << blue_y <<endl;
+
+int data[4] = {red_x, red_y, blue_x, blue_y};
+
+
+    for ( int i=0; i<4; i++ ){
+	if (data[i] < 10)
+	    location_file << "0" << data[i];
+	else
+	    location_file << data[i];
+     }
+	
     location_file.close();
 }
 
 
 void editPortion( int *x, int *y ){
-    (*x) = ((*x) / 480.0) * 42;
-    (*y) = ((*y) / 320.0) * 28;
+    (*x) = (*x - 19) / 459.0 * 42; 
+    (*y) = (*y - 19) / 292.0 * 28;
     return;
 }
