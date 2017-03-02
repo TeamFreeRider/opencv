@@ -1,113 +1,149 @@
+//written in Feb, 1, 2017
+
+// receive capital L,R slightly before turn point
+// when the number of pixels become lower than 150, sends L,R to arduino
+
+
+
 #include "opencv2/opencv.hpp"
 #include <time.h>
+#include <fstream>
+#include <iostream>
+#include <string>
 
 using namespace cv;
 using namespace std;
 
+
+int is_white(Mat frame, int row, int col);
 void sleep( unsigned int mseconds );
+char lanetrace(int average, int left_pixel, int right_pixel);
 
-int main(int, char**)
-{
+
+int main(int, char**){
+
+    ifstream instruction_file;
+    ofstream flush;
+
+    flush.open("instruction.txt");
+    flush << "X";
+    flush.close();
+
     VideoCapture cap(0); // open the default camera
-
-    Mat edges;
-    Mat stream_left ( 360 , 180, CV_8UC1 );
-    Mat stream_right (360, 180, CV_8UC1 );
-    namedWindow("left",1);
-    namedWindow("right",2);
 
     FILE *file;
 
-    while ( waitKey(1) != 'q' )  {
+    Mat stream;
+    Mat frame( 100, 150, CV_8UC1 );
 
-        file = fopen("/dev/ttyACM0","w");
-        Mat frame;
-        cap >> frame; // get a new frame from camera
-        cvtColor(frame, edges, COLOR_BGR2GRAY);
-        GaussianBlur(edges, edges, Size(7,7), 1.5, 1.5);
-        Canny(edges, edges, 0, 30, 3);
+    int width = frame.cols;
+    int height = frame.rows;
 
-        int width = edges.cols;
-        int height = edges.rows;
+    Mat stream_left ( height/5*3, width/2, CV_8UC1 );
+    Mat stream_right ( height/5*3, width/2, CV_8UC1 );
 
-        //left side
-        Point L1 = Point(0, 0);
-        Point L2 = Point(width/3, 0);
-        Point L3 = Point(width/6, height);
-        Point L4 = Point(0, height);
-        vector<Point> point_L;
+    namedWindow("left",1);
+    namedWindow("right",2);
+    namedWindow("stream",3);
 
-        point_L.push_back(L1);
-        point_L.push_back(L2);
-        point_L.push_back(L3);
-        point_L.push_back(L4);
+    char buff[5];
+    char instruction, serial;
 
-        //right side
-        Point R1 = Point(width/3*2,0);
-        Point R2 = Point(width,0);
-        Point R3 = Point(width,height);
-        Point R4 = Point(width/6*5,height);
-        vector<Point> point_R;
+    while (1)  {
+        
+        instruction_file.open("instruction.txt", ios::in);
+        if (instruction_file){
+            instruction_file.get(instruction);
+            cout << instruction << endl;
+            instruction_file.close();
+        }
 
-        point_R.push_back(R1);
-        point_R.push_back(R2);
-        point_R.push_back(R3);
-        point_R.push_back(R4);
 
-        //fill screen with black and draw ROI in white
-        Mat roi1(height, width, CV_8U, Scalar(0));
-        fillConvexPoly(roi1, point_L , Scalar(255));
-        fillConvexPoly(roi1, point_R , Scalar(255));
 
-        Mat view;
-        edges.copyTo(view,roi1);
+        Mat stream;
+        cap >> stream; // get a new frame from camera
 
-       //ROI_SETTING
-        Rect leftRoi = Rect( 0, 0, width/3, height );
-        Mat tmp = view.clone();
-        tmp(leftRoi).copyTo(stream_left);
+        resize( stream, frame, Size( 150, 100 ), 0, 0);    
 
-        Rect rightRoi = Rect(360,0,180,360);
-        tmp(rightRoi).copyTo(stream_right);
+        cvtColor(frame, frame, COLOR_BGR2GRAY);
+        threshold(frame, frame, 150, 255, THRESH_BINARY);
 
-        int left_white = 0;
-        int right_white = 0;
+        Rect leftRect = Rect( 0, height/5*2, width/2, height/5*3 );
+        stream_left = frame(leftRect);
+
+        Rect rightRect = Rect(width/2, height/5*2, width/2, height/5*3);
+        stream_right = frame(rightRect);
+
+        int left_pixel = 0;
+        int right_pixel = 0;
+
 
         for ( int row = 0; row < stream_left.rows; row++) {
             for ( int col = 0; col < stream_left.cols; col++) {
-                if ( stream_left.at<uchar>(row,col) ) {
-                    left_white++;
+                if ( is_white(stream_left, row, col)) {
+                    left_pixel++;
                 }
             }
         }
+
 
         for ( int row = 0; row < stream_right.rows; row++) {
             for ( int col = 0; col < stream_right.cols; col++) {
-                if ( stream_right.at<uchar>(row,col) ) {
-                    right_white++;
+                if ( is_white(stream_right, row, col)) {
+                    right_pixel++;
                 }
             }
         }
 
-       if ( left_white >= 50 && right_white < 50 ) {
-            fprintf(file, "%c", 'L'); sleep(10); }
-        else if ( left_white < 50 && right_white >= 50 ) {
-            fprintf(file, "%c", 'R'); sleep(10); }
-        else if (left_white < 50 && right_white < 50 ) {
-            fprintf(file, "%c", 'F'); sleep(10); }
-        else {
-            fprintf(file, "%c", 'E'); sleep(10); }
 
+        int average = (left_pixel + right_pixel)/2;
+        
+
+        if ( instruction == 'L' ){
+            if ( left_pixel < 150 ) 
+                serial = 'L';
+            else 
+                serial = lanetrace(average, left_pixel, right_pixel);
+        }
+        
+        else if (instruction == 'R' ){
+            if (right_pixel < 150 )
+                serial = 'R';
+            else 
+                serial = lanetrace(average, left_pixel, right_pixel);
+        }
+
+        else if (instruction == 'S')
+            serial = 'S';
+
+        else 
+            serial = lanetrace(average, left_pixel, right_pixel);
+        
+        file = fopen("/dev/ttyUSB0", "w");
+        fprintf(file, "%c", serial);
         fclose(file);
 
         imshow("left", stream_left);
         imshow("right", stream_right);
+        imshow("stream", stream);
 
+        if(waitKey(30) >= 0) break;
     }
-    // the camera will be deinitialized automatically 
+
+    // the camera will be deinitialized automatically in VideoCapture destructor
+
     return 0;
 
 }
+
+
+
+int is_white(Mat frame, int row, int col) {
+
+    return frame.at<uchar>(row, col) == 255;
+
+}
+
 
 void sleep ( unsigned int mseconds ) {
 
@@ -116,3 +152,17 @@ void sleep ( unsigned int mseconds ) {
 
 }
 
+char lanetrace(int average, int left_pixel, int right_pixel){
+
+    char direction;
+
+    if ( average - 50 > left_pixel )
+        direction = 'l';
+    else if ( average - 50 > right_pixel )
+        direction = 'r';
+    else 
+        direction = 'f';
+
+    return direction;
+    
+}
